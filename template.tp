@@ -1,0 +1,248 @@
+const (
+	htmlTemplate = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1.0"
+    />
+    <base href="{{ .Target }}" target="_blank">
+    <title>FFUF Report - </title>
+
+    <!-- CSS  -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+	/>
+	<link 
+	  rel="stylesheet" 
+	  type="text/css" 
+	  href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.css"
+	/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.7.1/ace.js" type="text/javascript" charset="utf-8"></script>
+  </head>
+
+  <body>
+  <script>
+  var latest_editor = null;
+  function render_content(id){
+    var ele = document.getElementById('modal_'+id)
+    var instance = M.Modal.getInstance(ele);
+    instance.open();
+    const obj_id = "object_"+id;
+    const object_content = document.getElementById("object_"+id);
+    const location = window.location.href;
+    const url = new URL(window.location.href)
+    var construct = url.protocol+"//"+window.location.hostname
+    const u = url.pathname;
+    const split = u.split("/");
+    split.pop();
+    const final_url = split.join("/");
+    construct = construct+final_url+"/"+id;
+    console.log(construct);
+    fetch(construct).then(res=>res.text()).then(f=>{
+      object_content.innerHTML = f;
+    })
+
+  }
+  String.prototype.toHtmlEntities = function() {
+    return this.replace(/./gm, function(s) {
+        // return "&#" + s.charCodeAt(0) + ";";
+        return (s.match(/[a-z0-9\s]+/i)) ? s : "&#" + s.charCodeAt(0) + ";";
+    });
+};
+  function render_content1(id){
+    var ele = document.getElementById('modal1_'+id)
+    var instance = M.Modal.getInstance(ele);
+    instance.open();
+    const obj_id = "object1_"+id;
+    const object_content = document.getElementById("object1_"+id);
+    const location = window.location.href;
+    const url = new URL(window.location.href)
+    var construct = url.protocol+"//"+window.location.hostname
+    const u = url.pathname;
+    const split = u.split("/");
+    split.pop();
+    const final_url = split.join("/");
+    construct = construct+final_url+"/"+id;
+    console.log(construct);
+    fetch(construct).then(res=>res.text()).then(f=>{
+      if(latest_editor){
+        latest_editor.destroy();
+      }
+      object_content.innerHTML = f.toHtmlEntities();
+      var editor = ace.edit("object1_"+id);
+      latest_editor = editor;
+      editor.setTheme("ace/theme/monokai");
+      editor.session.setMode("ace/mode/html");
+    })
+
+  }
+  </script>
+
+    <nav>
+      <div class="nav-wrapper">
+        <a href="#" class="brand-logo">FFUF</a>
+        <ul id="nav-mobile" class="right hide-on-med-and-down">
+        </ul>
+      </div>
+    </nav>
+
+    <main class="section no-pad-bot" id="index-banner">
+      <div class="container">
+        <br /><br />
+        <h1 class="header center ">FFUF Report</h1>
+        <div class="row center">
+
+		<pre>{{ .CommandLine }}</pre>
+		<pre>{{ .Time }}</pre>
+
+   <table id="ffufreport">
+        <thead>
+        <div style="display:none">
+|result_raw|StatusCode|Input|Position|ContentLength|ContentWords|ContentLines|
+        </div>
+          <tr>
+              <th>Status</th>
+{{ range .Keys }}              <th>{{ . }}</th>
+{{ end }}
+			  <th>URL</th>
+			  <th>Redirect location</th>
+              <th>Position</th>
+              <th>Length</th>
+              <th>Words</th>
+			  <th>Lines</th>
+			  <th>Type</th>
+        <th>Duration</th>
+			  <th>Render</th>
+        <th>View</th>
+          </tr>
+        </thead>
+
+        <tbody>
+			{{range $result := .Results}}
+                <div style="display:none">
+|result_raw|{{ $result.StatusCode }}{{ range $keyword, $value := $result.Input }}|{{ $value | printf "%s" }}{{ end }}|{{ $result.Url }}|{{ $result.RedirectLocation }}|{{ $result.Position }}|{{ $result.ContentLength }}|{{ $result.ContentWords }}|{{ $result.ContentLines }}|{{ $result.ContentType }}|
+                </div>
+                <tr class="result-{{ $result.StatusCode }}" style="background-color: {{$result.HTMLColor}};">
+                    <td><font color="black" class="status-code">{{ $result.StatusCode }}</font></td>
+                    {{ range $keyword, $value := $result.Input }}
+                        <td>{{ $value | printf "%s" }}</td>
+                    {{ end }}
+                    <td><a href="{{ $result.Url }}">{{ $result.Url }}</a></td>
+                    <td><a href="{{ $result.RedirectLocation }}">{{ $result.RedirectLocation }}</a></td>
+                    <td>{{ $result.Position }}</td>
+                    <td>{{ $result.ContentLength }}</td>
+                    <td>{{ $result.ContentWords }}</td>
+					<td>{{ $result.ContentLines }}</td>
+					<td>{{ $result.ContentType }}</td>
+          <td>{{ $result.Duration }}</td>
+                    <td>
+                    <!-- Modal Trigger -->
+                    <a class="waves-effect waves-light btn modal-trigger" onclick="render_content('{{ $result.ResultFile }}')">Render</a>
+
+                    <!-- Modal Structure -->
+                    <div style="height:60%" id="modal_{{ $result.ResultFile }}" class="modal">
+                      <div style="height:100%" class="modal-content">
+
+                       <code id="object_{{ $result.ResultFile }}"
+width="100%"
+height="100%"
+>
+
+</code>
+                      </div>
+
+                      <div class="modal-footer">
+
+                      </div>
+                    </div></td>
+                    <td>
+                    <!-- Modal Trigger -->
+                    <a class="waves-effect waves-light btn modal-trigger" onclick="render_content1('{{ $result.ResultFile }}')">View</a>
+
+                    <!-- Modal Structure -->
+                    <div style="height:60%" id="modal1_{{ $result.ResultFile }}" class="modal">
+                      <div style="height:100%" class="modal-content">
+
+                       <div class="popme" id="object1_{{ $result.ResultFile }}"
+width="100%"
+height="100%"
+>
+
+</div>
+                      </div>
+
+                      <div class="modal-footer">
+
+                      </div>
+                    </div></td>
+                </tr>
+            {{ end }}
+        </tbody>
+      </table>
+
+        </div>
+        <br /><br />
+      </div>
+    </main>
+
+    <!--JavaScript at end of body for optimized  loading-->
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var elems = document.querySelectorAll('.modal');
+      var instances = M.Modal.init(elems, options);
+    });
+
+    // Or with jQuery
+
+    $(document).ready(function(){
+      $('.modal').modal();
+    });
+    $(document).ready(function() {
+        $('#ffufreport').DataTable(
+            {
+                "aLengthMenu": [
+                    [250, 500, 1000, 2500, -1],
+                    [250, 500, 1000, 2500, "All"]
+                ]
+            }
+        )
+        $('select').formSelect();
+        });
+
+
+    </script>
+    <style>
+      body {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1 0 auto;
+      }
+      .popme {
+        position: absolute !important;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+    }
+    </style>
+  </body>
+</html>
+
+	`
+)
